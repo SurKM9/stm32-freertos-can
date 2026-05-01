@@ -19,4 +19,6 @@ blinky/.settings/
 *.hex
 *.map
 *.list
+*.FLASH.ld
+*.RAM.ld
 
