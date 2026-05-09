@@ -26,6 +26,13 @@
 #define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY    5
 #define configKERNEL_INTERRUPT_PRIORITY         ( configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY    ( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )
+/* Map FreeRTOS port handler names to the names in the STM32 vector table.
+   Without these, the startup file's weak SVC/PendSV/SysTick symbols fall
+   back to Default_Handler and the scheduler never ticks. */
+#define vPortSVCHandler     SVC_Handler
+#define xPortPendSVHandler  PendSV_Handler
+#define xPortSysTickHandler SysTick_Handler
+
 #define INCLUDE_vTaskDelay                      1
 #define INCLUDE_vTaskDelayUntil                 1
 #define INCLUDE_vTaskDelete                     1

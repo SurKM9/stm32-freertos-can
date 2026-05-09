@@ -16,12 +16,45 @@
  ******************************************************************************
  */
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #define RCC_BASE   0x40023800UL
 #define GPIOA_BASE 0x40020000UL
 
 #define RCC_AHB1ENR (*((volatile unsigned int *)(RCC_BASE + 0x30)))
 #define GPIOA_MODER (*((volatile unsigned int *)(GPIOA_BASE + 0x00)))
 #define GPIOA_ODR   (*((volatile unsigned int *)(GPIOA_BASE + 0x14)))
+
+/* Called by FreeRTOS when configCHECK_FOR_STACK_OVERFLOW detects a task has
+   overrun its stack. Trap here so the debugger can identify the offending task. */
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
+{
+    (void)xTask;
+    (void)pcTaskName;
+    while(1);
+}
+
+void blinky_task(void *pvParameters)
+{
+	 /* pvParameters is unused — cast to void to suppress compiler warning */
+	(void)pvParameters;
+
+	while(1)
+	{
+		 /* LED on: set PA5 high */
+		  GPIOA_ODR |= (1U << 5);
+
+		  /* Block for 500 ms — scheduler runs idle task while we wait */
+		  vTaskDelay(pdMS_TO_TICKS(500));
+
+		  /* LED off: set PA5 low */
+		  GPIOA_ODR &= ~(1U << 5);
+
+		  /* Block for 500 ms again before next toggle */
+		  vTaskDelay(pdMS_TO_TICKS(500));
+	}
+}
 
 int main(void)
 {
@@ -35,19 +68,15 @@ int main(void)
 	GPIOA_MODER &= ~(3U << 10);  // clear bits 11:10
 	GPIOA_MODER |=  (1U << 10);  // set bit 10 → output mode
 
-	// Step 3: Blink forever
-	while(1)
-	{
-		// Toggle PA5 high
-		GPIOA_ODR |= (1U << 5);
+	xTaskCreate(
+		blinky_task,  /* Function pointer: the task's entry point                       */
+		"Blinky",     /* Name: human-readable label, only used by debuggers/trace tools  */
+		128,          /* Stack depth in WORDS — 128 × 4 = 512 bytes on Cortex-M4        */
+		NULL,         /* pvParameters: passed into the task function; unused here        */
+		1,            /* Priority: 1 = one above idle (0); highest wins the CPU          */
+		NULL          /* Task handle: pass a TaskHandle_t* here to suspend/delete later  */
+	);
 
-		// Crude delay
-		for(volatile int i = 0; i < 500000; i++);
-
-		// Toggle PA5 low
-		GPIOA_ODR &= ~(1U << 5);
-
-		// Crude delay
-		for(volatile int i = 0; i < 500000; i++);
-	}
+	/* Hand control to FreeRTOS — never returns if heap is sufficient */
+	vTaskStartScheduler();
 }
